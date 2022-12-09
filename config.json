@@ -1,0 +1,10 @@
+[
+  {
+    "path": "/backoffice",
+    "target": "http://10.8.0.10:8080/api/bo"
+  },
+  {
+    "path": "/test",
+    "target": "https://jsonplaceholder.typicode.com"
+  }
+]
