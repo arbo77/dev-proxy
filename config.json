@@ -1,7 +1,23 @@
 [
   {
+    "path": "/api-gateway",
+    "target": "http://10.8.0.5:8090"
+  },
+  {
+    "path": "/api-challenge-code",
+    "target": "http://10.8.0.5:8090"
+  },
+  {
+    "path": "/api-invoice-management",
+    "target": "http://10.8.0.5:9011/api"
+  },
+  {
+    "path": "/api-upload-invoice",
+    "target": "http://10.8.0.5:9010/api"
+  },
+  {
     "path": "/backoffice",
-    "target": "http://10.8.0.10:8080/api/bo"
+    "target": "http://10.8.0.5:8080/api/bo"
   },
   {
     "path": "/test",
