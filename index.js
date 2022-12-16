@@ -7,12 +7,9 @@ const configFile = './config.json';
 
 const port = process.argv[2] || 3000;
 const app = express();
-const whiteListIp = []
 
-app.use(cors({
-  methods: ["HEAD", "OPTIONS", "GET", "POST", "PUT", "PATCH", "DELETE"],
-  origin: "*",
-}));
+let cookies = {}
+
 let server;
 
 function RunProxy() {
@@ -27,9 +24,25 @@ function RunProxy() {
         target: c.target,
         changeOrigin: true,
         pathRewrite: (path, req) => { return path.replace(c.path, '') },
-        onProxyRes: (proxyRes, req, res) => {
-          proxyRes.headers['x-proxy'] = 'dev-proxy'
+        onProxyReq: (proxyReq, req) => {
+          const cookie = cookies[req.header('Origin')]
+          if (cookie) {
+            proxyReq.setHeader('Cookie', cookie);
+          }
         },
+        onProxyRes: (proxyRes, req) => {
+          const originHost = proxyRes.headers['access-control-allow-origin']
+          const vary = proxyRes.headers['vary']
+          proxyRes.headers['x-proxy'] = 'dev-proxy'
+          if (req.path.includes('/login')) {
+            const cookie = proxyRes.rawHeaders.filter(h => {
+              return h.includes('JSESSIONID')
+            })
+            proxyRes.headers['set-cookie'] = cookie[0]
+            cookies[originHost] = cookie[0]
+          }
+        }
+
       })
     );
   });
