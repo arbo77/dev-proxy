@@ -9,6 +9,7 @@ const port = process.argv[2] || 3000;
 const app = express();
 
 let cookies = {}
+let userDetail = {}
 
 let server;
 
@@ -25,10 +26,23 @@ function RunProxy() {
         changeOrigin: true,
         pathRewrite: (path, req) => { return path.replace(c.path, '') },
         onProxyReq: (proxyReq, req) => {
+
+          req.path !== '/api/keepalive' && console.log(req.socket.remoteAddress, req.path)
           const cookie = cookies[req.header('Origin')]
           if (cookie) {
             proxyReq.setHeader('Cookie', cookie);
+
+            const idx = req.rawHeaders.indexOf('USER-DETAILS')
+            if (req.rawHeaders.indexOf('USER-DETAILS') > -1) {
+              userDetail[cookie] = req.rawHeaders[idx + 1]
+            }
+
+            if (userDetail[cookie]) {
+              proxyReq.setHeader('USER-DETAILS', userDetail[cookie])
+            }
           }
+
+
         },
         onProxyRes: (proxyRes, req) => {
           const originHost = proxyRes.headers['access-control-allow-origin']
