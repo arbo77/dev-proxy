@@ -27,24 +27,18 @@ function RunProxy() {
         pathRewrite: (path, req) => { return path.replace(c.path, '') },
         onProxyReq: (proxyReq, req) => {
 
-          req.path !== '/api/keepalive' && console.log(req.socket.remoteAddress, req.path)
           const cookie = cookies[req.header('Origin')]
           if (cookie) {
             proxyReq.setHeader('Cookie', cookie);
-
-            const idx = req.rawHeaders.indexOf('USER-DETAILS')
-            if (req.rawHeaders.indexOf('USER-DETAILS') > -1) {
-              userDetail[cookie] = req.rawHeaders[idx + 1]
-            }
-
             if (userDetail[cookie]) {
-              proxyReq.setHeader('USER-DETAILS', userDetail[cookie])
+              proxyReq.setHeader('USER-DETAILS', JSON.stringify(userDetail[cookie]))
             }
           }
 
 
         },
         onProxyRes: (proxyRes, req) => {
+          req.path !== '/api/keepalive' && console.log(req.socket.remoteAddress, req.path, proxyRes.statusCode)
           const originHost = proxyRes.headers['access-control-allow-origin']
           const vary = proxyRes.headers['vary']
           proxyRes.headers['x-proxy'] = 'dev-proxy'
@@ -54,6 +48,25 @@ function RunProxy() {
             })
             proxyRes.headers['set-cookie'] = cookie[0]
             cookies[originHost] = cookie[0]
+          }
+
+          if (req.path === '/api/profile') {
+            const cookie = cookies[req.header('Origin')]
+            var body = new Buffer('');
+            proxyRes.on('data', function (data) {
+              body = Buffer.concat([body, data]);
+            });
+            proxyRes.on('end', function () {
+              body = body.toString();
+
+              if (body.length > 1) {
+                const data = JSON.parse(body).output_schema
+                userDetail[cookie] = {
+                  corpId: data.corpId,
+                  userId: data.userId,
+                }
+              }
+            });
           }
         }
 
