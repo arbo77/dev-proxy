@@ -64,6 +64,7 @@ function RunProxy() {
                 userDetail[cookie] = {
                   corpId: data.corpId,
                   userId: data.userId,
+                  role: data.role
                 }
               }
             });
