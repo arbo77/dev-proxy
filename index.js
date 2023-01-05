@@ -38,27 +38,17 @@ function RunProxy() {
             }
           }
         },
-        onProxyRes: (proxyRes, req) => {
+        onProxyRes: (proxyRes, req, res) => {
           req.path !== '/api/keepalive' && console.log(req.socket.remoteAddress, req.path, proxyRes.statusCode)
           const originHost = proxyRes.headers['access-control-allow-origin']
           const vary = proxyRes.headers['vary']
           proxyRes.headers['x-proxy'] = 'dev-proxy'
-          if (req.path.includes('/login')) {
-            const cookie = proxyRes.rawHeaders.filter(h => {
-              return h.includes('JSESSIONID')
-            })
-            proxyRes.headers['set-cookie'] = cookie[0]
-            cookies[originHost] = cookie[0]
-          }
 
+          var body = new Buffer.from('');
           if (req.path === '/api/profile') {
             const cookie = cookies[req.header('Origin')]
-            var body = new Buffer('');
             proxyRes.on('data', function (data) {
               body = Buffer.concat([body, data]);
-            });
-            proxyRes.on('error', function (data) {
-              console.log(data)
             });
             proxyRes.on('end', function () {
               body = body.toString();
@@ -73,6 +63,17 @@ function RunProxy() {
               }
             });
           }
+
+          body = new Buffer.from('')
+          proxyRes.on('data', function (data) {
+            body = Buffer.concat([body, data]);
+          });
+          proxyRes.on('end', function () {
+            body = body.toString();
+            res.status(200).send(body)
+          });
+
+
         },
         onError: (err, req, res) => {
           console.log(err)
