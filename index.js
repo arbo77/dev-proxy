@@ -11,6 +11,7 @@ let cookies = {}
 let userDetail = {}
 
 let server;
+const TIMEOUT = 400000;
 
 function RunProxy() {
   server && server.close()
@@ -22,6 +23,8 @@ function RunProxy() {
       c.path,
       createProxyMiddleware({
         target: c.target,
+        proxyTimeout: TIMEOUT,
+        timeout: TIMEOUT,
         changeOrigin: true,
         selfHandleResponse: true,
         pathRewrite: (path, req) => { return path.replace(c.path, '') },
