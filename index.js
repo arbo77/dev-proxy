@@ -1,8 +1,7 @@
 // @arbo77
 const express = require('express');
 const fs = require('fs');
-const cors = require('cors');
-const { createProxyMiddleware } = require('http-proxy-middleware');
+const { createProxyMiddleware, responseInterceptor } = require('http-proxy-middleware');
 const configFile = './config.json';
 
 const port = process.argv[2] || 3000;
@@ -24,6 +23,7 @@ function RunProxy() {
       createProxyMiddleware({
         target: c.target,
         changeOrigin: true,
+        selfHandleResponse: true,
         pathRewrite: (path, req) => { return path.replace(c.path, '') },
         onProxyReq: (proxyReq, req) => {
 
@@ -34,8 +34,6 @@ function RunProxy() {
               proxyReq.setHeader('USER-DETAILS', JSON.stringify(userDetail[cookie]))
             }
           }
-
-
         },
         onProxyRes: (proxyRes, req) => {
           req.path !== '/api/keepalive' && console.log(req.socket.remoteAddress, req.path, proxyRes.statusCode)
@@ -56,6 +54,9 @@ function RunProxy() {
             proxyRes.on('data', function (data) {
               body = Buffer.concat([body, data]);
             });
+            proxyRes.on('error', function (data) {
+              console.log(data)
+            });
             proxyRes.on('end', function () {
               body = body.toString();
 
@@ -69,6 +70,11 @@ function RunProxy() {
               }
             });
           }
+        },
+        onError: (err, req, res) => {
+          console.log(err)
+          res.status(504)
+          res.json({ error_code: "ESB-17-004", error_message: { indonesian: "Timeout", english: "Timeout" } })
         }
 
       })
