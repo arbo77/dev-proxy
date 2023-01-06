@@ -1,7 +1,8 @@
 // @arbo77
 const express = require('express');
 const fs = require('fs');
-const { createProxyMiddleware, responseInterceptor } = require('http-proxy-middleware');
+const cors = require('cors');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 const configFile = './config.json';
 
 const port = process.argv[2] || 3000;
@@ -11,7 +12,6 @@ let cookies = {}
 let userDetail = {}
 
 let server;
-const TIMEOUT = 400000;
 
 function RunProxy() {
   server && server.close()
@@ -23,10 +23,7 @@ function RunProxy() {
       c.path,
       createProxyMiddleware({
         target: c.target,
-        proxyTimeout: TIMEOUT,
-        timeout: TIMEOUT,
         changeOrigin: true,
-        selfHandleResponse: true,
         pathRewrite: (path, req) => { return path.replace(c.path, '') },
         onProxyReq: (proxyReq, req) => {
 
@@ -37,16 +34,25 @@ function RunProxy() {
               proxyReq.setHeader('USER-DETAILS', JSON.stringify(userDetail[cookie]))
             }
           }
+
+
         },
-        onProxyRes: (proxyRes, req, res) => {
+        onProxyRes: (proxyRes, req) => {
           req.path !== '/api/keepalive' && console.log(req.socket.remoteAddress, req.path, proxyRes.statusCode)
           const originHost = proxyRes.headers['access-control-allow-origin']
           const vary = proxyRes.headers['vary']
           proxyRes.headers['x-proxy'] = 'dev-proxy'
+          if (req.path.includes('/login')) {
+            const cookie = proxyRes.rawHeaders.filter(h => {
+              return h.includes('JSESSIONID')
+            })
+            proxyRes.headers['set-cookie'] = cookie[0]
+            cookies[originHost] = cookie[0]
+          }
 
-          var body = new Buffer.from('');
           if (req.path === '/api/profile') {
             const cookie = cookies[req.header('Origin')]
+            var body = new Buffer('');
             proxyRes.on('data', function (data) {
               body = Buffer.concat([body, data]);
             });
@@ -63,22 +69,9 @@ function RunProxy() {
               }
             });
           }
-
-          body = new Buffer.from('')
-          proxyRes.on('data', function (data) {
-            body = Buffer.concat([body, data]);
-          });
-          proxyRes.on('end', function () {
-            body = body.toString();
-            res.status(200).send(body)
-          });
-
-
         },
         onError: (err, req, res) => {
-          console.log(err)
-          res.status(504)
-          res.json({ error_code: "ESB-17-004", error_message: { indonesian: "Timeout", english: "Timeout" } })
+          res.status(504).send({ error_code: "ESB-17-004", error_message: { indonesian: "Timeout", english: "Timeout" } })
         }
 
       })
